@@ -1,0 +1,11 @@
+Model Information:
+* title:	Pokemon Card 3D
+* source:	https://sketchfab.com/3d-models/pokemon-card-3d-bf8b809b801248e7a316d4ad7727345a
+* author:	Johana-PS (https://sketchfab.com/Johana-PS)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Pokemon Card 3D" (https://sketchfab.com/3d-models/pokemon-card-3d-bf8b809b801248e7a316d4ad7727345a) by Johana-PS (https://sketchfab.com/Johana-PS) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
