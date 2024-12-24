@@ -4,7 +4,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { useEffect } from "react";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { gsap } from "gsap";
-import { min } from "three/webgpu";
+import { text } from "stream/consumers";
 
 
 
@@ -48,7 +48,7 @@ export default function Home() {
     // scene.add(directionalLight);
 
 
-    const ambientLight = new THREE.AmbientLight(0x404040, 450); // Increased intensity
+    const ambientLight = new THREE.AmbientLight(0x404040, 100); // Increased intensity previously 450
     scene.add(ambientLight);
 
     // Grid Helper
@@ -56,22 +56,52 @@ export default function Home() {
     scene.add(gridHelper);
 
     // Controls
+    const controls = new OrbitControls(camera, renderer.domElement);
+    // controls.minPolarAngle = Math.PI / 4; // Limit upward rotation (e.g., 45 degrees)
+    controls.maxPolarAngle = Math.PI / 2; 
     
 
     // Load GLTF Model
 
     let cardpack : THREE.Object3D | null = null;
     let isMoving = false;
+    let pokemon_card : THREE.Object3D | null = null;
 
-    // const lineWidth = 4;
-    // const lineGeometry = new THREE.BufferGeometry().setFromPoints([
-    //   new THREE.Vector3(-.65, 0, -.75),
-    //   new THREE.Vector3(.85, 0, -.75)
-    // ]);
+    const lineWidth = 10;
+    const lineGeometry = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-.65, 0, -.75),
+      new THREE.Vector3(.85, 0, -.75)
+    ]);
+    
+    const cutLineMaterial = new THREE.ShaderMaterial({
+ 
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+          fragmentShader: `
+        uniform float time;
+        uniform vec3 color;
+        varying vec2 vUv;
+        void main() {
+          float glow = abs(sin(time * 2.0 + vUv.x * 10.0)); // Sine wave animation
+          gl_FragColor = vec4(color * glow, 1.0);
+        }
+      `,
+      uniforms: {
+        time: { value: 0 }, // This will be animated
+        color: { value: new THREE.Color(0xff0000) }, // Glowing red color
+      },
+      transparent: true, // Allow blending with the background
+    });
     // const lineMaterial = new THREE.LineBasicMaterial({
     //   color: 0xff0000, linewidth: lineWidth });
-    // const lineObject = new THREE.Line(lineGeometry, lineMaterial);
-    // scene.add(lineObject);
+    const lineObject = new THREE.Line(lineGeometry, cutLineMaterial);
+    lineObject.position.set(0.0, 0.2, 0.1);
+    scene.add(lineObject);
 
 
     
@@ -84,28 +114,24 @@ export default function Home() {
         cardpack = gltf.scene;
 
         // Reset position and scale
-        gltf.scene.position.set(0, 0, .25);
-        gltf.scene.scale.set(1, 1 ,1);
-        gltf.scene.rotation.y = Math.PI / 2;
+        cardpack.position.set(0, 0, .25);
+        cardpack.scale.set(1, 1 ,1);
+        cardpack.rotation.y = Math.PI / 2;
 
-        scene.add(gltf.scene);
+        cardpack.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+        
+            child.material.metalness = 0.2;
+            child.material.roughness = 0.9;
+          }
 
-        // renderer.domElement.addEventListener('click', () => {
-        //   if (cardpack && !isMoving) {
-        //     isMoving = true;
+        });
 
-        //     // Create a GSAP animation for smooth movement
-        //     gsap.to(cardpack.position, {
-        //       z: cardpack.position.z + 5, // Move 5 units up
-        //       duration: 1.5, // 1 second duration
-        //       ease: "power2.in",
-        //       onComplete: () => {
-        //         isMoving = false; // Allow further moves after animation completes
-        //       }
-        //     });
-        //   }
-        // });
+       
+        scene.add(cardpack);
 
+    
+      
   
   
 
@@ -118,62 +144,74 @@ export default function Home() {
       }
     );
 
-    loader.load(
-      "/pokemon_card_3d/scene.gltf",
-      (gltf) => {
-        console.log("Model loaded:", gltf.scene);
+    // loader.load(
+    //   "/pokemon_card_3d/scene.gltf",
+    //   (gltf) => {
+    //     console.log("Model loaded:", gltf.scene);
 
-        // Reset position and scale
-        gltf.scene.position.set(.12, 0, .25);
-        gltf.scene.scale.set(4, 4, 4);
-        gltf.scene.rotation.y = -Math.PI / 2;
-        gltf.scene.rotation.z = Math.PI / 2;
+    //     pokemon_card = gltf.scene;
 
-        scene.add(gltf.scene);
+    //     // Reset position and scale
+    //     gltf.scene.position.set(.12, 0, .25);
+    //     gltf.scene.scale.set(4, 4, 4);
+    //     gltf.scene.rotation.y = -Math.PI / 2;
+    //     gltf.scene.rotation.z = Math.PI / 2;
+
+    //     scene.add(gltf.scene);
 
        
 
 
-      },
-      (xhr) => {
-        console.log((xhr.loaded / xhr.total) * 100 + "% loaded");
-      },
-      (error) => {
-        console.error("An error occurred:", error);
-      }
-    );
+    //   },
+    //   (xhr) => {
+    //     console.log((xhr.loaded / xhr.total) * 100 + "% loaded");
+    //   },
+    //   (error) => {
+    //     console.error("An error occurred:", error);
+    //   }
+    // );
 
     const textureLoader = new THREE.TextureLoader();
 
     // Array of texture paths for different Pokémon skins
     const texturePaths = [
-      '/textures/skin1.png',
+      '/charizard.jpeg',
       '/textures/skin2.png',
-      '/textures/skin3.png',
-      '/textures/skin4.png'
+      '/mom.jpeg',
+      '/ximenas.jpeg'
     ];
 
-    let pokemonModels: THREE.Group[] = []; // To store all Pokémon clones
+    let pokemonModels: THREE.Object3D[] = []; // To store all Pokémon clones
     let offset = 0;
 
     // // Load the Pokémon model and apply different textures
     loader.load("/pokemon_card_3d/scene.gltf", (gltf) => {
       const baseModel = gltf.scene;
+     
 
       // Create multiple Pokémon clones with different textures
       texturePaths.forEach((texturePath, index) => {
-        const clone = baseModel.clone(); // Clone the loaded model
+        let clone = baseModel.clone(); // Clone the loaded model
 
         // Load and apply a unique texture for this clone
+
         textureLoader.load(texturePath, (texture) => {
+          texture.colorSpace = THREE.SRGBColorSpace;
+          
           clone.traverse((child) => {
             if ((child as THREE.Mesh).isMesh) {
               const mesh = child as THREE.Mesh;
               // Assign new material with the loaded texture
-              mesh.material = new THREE.MeshStandardMaterial({ map: texture });
+              mesh.material = new THREE.MeshStandardMaterial({ 
+                map: texture,
+                metalness: 0, // Non-metallic
+                roughness: 0.8,  // High roughness for less reflectivity
+                emissive: 0x000000, // No emissive glow
+              });
             }
           });
         });
+
 
         // Position the clone in the scene
         offset -= 0.01;
@@ -188,9 +226,73 @@ export default function Home() {
       });
     });
 
+    let audio:THREE.Audio;
+    let audioBuffer: AudioBuffer;
+
+    const listener = new THREE.AudioListener();
+    camera.add(listener);
+
+    const audioLoader = new THREE.AudioLoader();
+    audioLoader.load("/audiomass-output.mp3", (buffer) => {
+      console.log('Audio loaded:', buffer);
+
+      audio = new THREE.Audio(listener);
+      audio.setBuffer(buffer);
+      audio.setLoop(false);
+      audio.setVolume(1.0);
+
+      audioBuffer = buffer;
+    })
+
+    const audioContext = listener.context;
+    let source: AudioBufferSourceNode;
+   
+    
+  
+
+    function playAudioAtPercentage(percentage : number) {
+      if (!audio || !audioBuffer) {
+        console.error("Audio is not loaded yet!");
+        return;
+      }
+
+      // Validate percentage input
+      if (percentage < 0 || percentage > 100) {
+        console.error("Percentage must be between 0 and 100.");
+        return;
+      }
+
+      console.log("Audio object:",audio)
+
+      if(!audio.buffer){
+        console.error("Audio buffer or source is not available.");
+        return;
+        
+      }
+
+      // Calculate the target time based on the percentage
+      const duration = audio.buffer.duration; // Total audio duration in seconds
+      const targetTime = (percentage / 100) * duration;
+
+      // Stop any ongoing playback
+    
+
+      // Create a new source node and play from the specified position
+      if (source){
+        source.stop();
+      }
+      source = audioContext.createBufferSource();
+    
+      source.buffer = audioBuffer;
+      source.connect(audioContext.destination);
+      source.start(0, targetTime); 
+    }
+
 
     function openpack() {
     if (cardpack && !isMoving) {
+
+        scene.remove(lineObject)
         isMoving = true;
 
         // Create a GSAP animation for smooth movement
@@ -204,6 +306,20 @@ export default function Home() {
         });
       }
 
+    }
+
+    function movecard(pokemon_card: THREE.Object3D) {
+      if (pokemon_card) {
+
+        gsap.to(pokemon_card.position, {
+          x: pokemon_card.position.x + 10,
+          duration: 1.5,
+
+
+        });
+
+
+      };
     }
 
    
@@ -339,9 +455,6 @@ export default function Home() {
       mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
       mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-      const cuttingThresholdYmax: number = -0.58
-      const cuttingThresholdYmin: number = -0.77
-
       // Set the raycaster
       raycaster.setFromCamera(mouse, camera);
 
@@ -349,12 +462,10 @@ export default function Home() {
       if (targetObject) {
         const intersects = raycaster.intersectObject(targetObject);
 
+        console.log("intersects",intersects)
+
         if (intersects.length > 0) {
 
-          if (intersects[0].point.z > cuttingThresholdYmax || intersects[0].point.z < cuttingThresholdYmin) {
-            pointCloudManager.clear();
-            return null
-          }
           return intersects[0].point;
         }
       }
@@ -363,12 +474,16 @@ export default function Home() {
       return null;
     }
 
+    
+
     // Usage example
     const pointCloudManager = new PointCloudManager(scene);
 
     let maxX: number = 0;
     let minX: number = 1000;
     let isDragging = false;
+    let count = 0;
+    let lastPercentage: number = -1;
 
     // Point drawing setup
     const pointGeometry = new THREE.BufferGeometry();
@@ -381,18 +496,55 @@ export default function Home() {
 
     renderer.domElement.addEventListener('pointerdown', (event) => {
       isDragging = true;
+
+      if (!pokemonModels) return
+
+      console.log("pokemonModels[count]",pokemonModels[count])
+      const cardIntersectionPoint = calculateIntersectionPoint(event, camera, scene, pokemonModels[count]);
+      console.log("cardIntersectionPoint",cardIntersectionPoint)
+      if (cardIntersectionPoint) {
+       movecard(pokemonModels[count]);
+       count += 1
+      }
+
     });
 
     renderer.domElement.addEventListener('pointermove', (event) => {
+      const cuttingThresholdYmax: number = -0.58
+      const cuttingThresholdYmin: number = -0.77
+      const cuttingLenght: number = 1.24
+      let percentage: number = 0
       if (!isDragging || !cardpack) {
         return;
       }
+
+  
       const intersectionPoint = calculateIntersectionPoint(event, camera, scene, cardpack);
 
 
+  
       if (intersectionPoint) {
+        controls.enabled = false;
         if( intersectionPoint.x > maxX) maxX = intersectionPoint.x;
         if( intersectionPoint.x < minX) minX = intersectionPoint.x;
+
+        if (intersectionPoint.z > cuttingThresholdYmax || intersectionPoint.z < cuttingThresholdYmin) {
+          lastPercentage = -1
+          pointCloudManager.clear();
+          return null
+        }
+
+        percentage = (maxX - minX) / cuttingLenght * 100
+
+        if(percentage - lastPercentage > 10){
+          lastPercentage = percentage
+          console.log("percentage complete:", lastPercentage, "%")
+          playAudioAtPercentage(lastPercentage)
+        }
+          
+     
+
+      
 
 
 
@@ -400,10 +552,13 @@ export default function Home() {
         pointCloudManager.addPoint(intersectionPoint);
         console.log('Intersection point:', intersectionPoint);
       }
+      
     });
 
     renderer.domElement.addEventListener('pointerup', () => {
       isDragging = false;
+      controls.enabled = true;
+      source.stop()
 
       console.log('Min X:', minX);
       console.log('Max X:', maxX);
@@ -416,6 +571,8 @@ export default function Home() {
       minX = 1000;
       maxX = 0;
 
+
+      lastPercentage = - 1
       pointCloudManager.clear();
 
     });
@@ -423,6 +580,7 @@ export default function Home() {
     function animate() {
 
       renderer.render(scene, camera);
+      cutLineMaterial.uniforms.time.value += .01; 
 
       requestAnimationFrame(animate);
     }
