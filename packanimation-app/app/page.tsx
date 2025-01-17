@@ -55,22 +55,24 @@ export default function Home() {
     const gridHelper = new THREE.GridHelper(10, 10);
     scene.add(gridHelper);
 
-    // Controls
-    const controls = new OrbitControls(camera, renderer.domElement);
-    // controls.minPolarAngle = Math.PI / 4; // Limit upward rotation (e.g., 45 degrees)
-    controls.maxPolarAngle = Math.PI / 2; 
+    // // Controls
+    // const controls = new OrbitControls(camera, renderer.domElement);
+    // // controls.minPolarAngle = Math.PI / 4; // Limit upward rotation (e.g., 45 degrees)
+    // controls.maxPolarAngle = Math.PI / 2; 
     
 
     // Load GLTF Model
 
-    let cardpack : THREE.Object3D | null = null;
+    let cardpack_top : THREE.Object3D | null = null;
+    let cardpack_buttom: THREE.Object3D | null = null;
     let isMoving = false;
     let pokemon_card : THREE.Object3D | null = null;
+    let packopened = false;
 
     const lineWidth = 10;
     const lineGeometry = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(-.65, 0, -.75),
-      new THREE.Vector3(.85, 0, -.75)
+      new THREE.Vector3(-.75, 0, -0.95),
+      new THREE.Vector3(.75, 0, -0.95)
     ]);
     
     const cutLineMaterial = new THREE.ShaderMaterial({
@@ -107,18 +109,18 @@ export default function Home() {
     
     const loader = new GLTFLoader();
     loader.load(
-      "/trading_card_pack/scene.gltf",
+      "/trading_card_pack_top/scene.gltf",
       (gltf) => {
         console.log("Model loaded:", gltf.scene);
 
-        cardpack = gltf.scene;
+        cardpack_top = gltf.scene;
 
         // Reset position and scale
-        cardpack.position.set(0, 0, .25);
-        cardpack.scale.set(1, 1 ,1);
-        cardpack.rotation.y = Math.PI / 2;
+        cardpack_top.position.set(0.06, 0, 0);
+        cardpack_top.scale.set(1.1, 1.1,1.1);
+        cardpack_top.rotation.y = Math.PI / 2;
 
-        cardpack.traverse((child) => {
+        cardpack_top.traverse((child) => {
           if (child instanceof THREE.Mesh) {
         
             child.material.metalness = 0.2;
@@ -128,12 +130,49 @@ export default function Home() {
         });
 
        
-        scene.add(cardpack);
+        scene.add(cardpack_top);
 
     
       
   
   
+
+      },
+      (xhr) => {
+        // console.log((xhr.loaded / xhr.total) * 100 + "% loaded");
+      },
+      (error) => {
+        console.error("An error occurred:", error);
+      }
+    );
+    loader.load(
+      "/trading_card_pack_buttom/scene.gltf",
+      (gltf) => {
+        console.log("Model loaded:", gltf.scene);
+
+        cardpack_buttom = gltf.scene;
+
+        // Reset position and scale
+        cardpack_buttom.position.set(0.06, 0, 0);
+        cardpack_buttom.scale.set(1.1, 1.1, 1.1);
+        cardpack_buttom.rotation.y = Math.PI / 2;
+
+        cardpack_buttom.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+
+            child.material.metalness = 0.2;
+            child.material.roughness = 0.9;
+          }
+
+        });
+
+
+        scene.add(cardpack_buttom);
+
+
+
+
+
 
       },
       (xhr) => {
@@ -143,6 +182,7 @@ export default function Home() {
         console.error("An error occurred:", error);
       }
     );
+
 
     // loader.load(
     //   "/pokemon_card_3d/scene.gltf",
@@ -176,9 +216,9 @@ export default function Home() {
     // Array of texture paths for different Pokémon skins
     const texturePaths = [
       '/charizard.jpeg',
-      '/textures/skin2.png',
-      '/mom.jpeg',
-      '/ximenas.jpeg'
+      '/pikachu_card.jpeg',
+      '/textures/skin3.png',
+      '/textures/skin4.png',
     ];
 
     let pokemonModels: THREE.Object3D[] = []; // To store all Pokémon clones
@@ -215,7 +255,7 @@ export default function Home() {
 
         // Position the clone in the scene
         offset -= 0.01;
-        clone.position.set(.12, offset, .25);
+        clone.position.set(0, offset, 0);
         clone.scale.set(4, 4, 4);
         clone.rotation.y = -Math.PI / 2;
         clone.rotation.z = Math.PI / 2;
@@ -227,31 +267,69 @@ export default function Home() {
     });
 
     let audio:THREE.Audio;
-    let audioBuffer: AudioBuffer;
+    let ripping_buffer: AudioBuffer;
+    let hit_buffer: AudioBuffer;
 
     const listener = new THREE.AudioListener();
     camera.add(listener);
+
+    const ripping = new THREE.Audio(listener);
 
     const audioLoader = new THREE.AudioLoader();
     audioLoader.load("/audiomass-output.mp3", (buffer) => {
       console.log('Audio loaded:', buffer);
 
-      audio = new THREE.Audio(listener);
-      audio.setBuffer(buffer);
-      audio.setLoop(false);
-      audio.setVolume(1.0);
+      
+      ripping.setBuffer(buffer);
+      ripping.setLoop(false);
+      ripping.setVolume(1.0);
 
-      audioBuffer = buffer;
+      ripping_buffer = buffer;
     })
 
     const audioContext = listener.context;
     let source: AudioBufferSourceNode;
-   
+
+
+    const hit = new THREE.Audio(listener);
+
+    audioLoader.load("hitsoundeffect.mp3", (buffer) => {
+      
+      hit.setBuffer(buffer)
+      hit.setLoop(false);
+      hit.setVolume(1.0);
+
+      hit_buffer = buffer
+    })   
+
+    const star = new THREE.Audio(listener);
+
+    audioLoader.load('starsoundeffect.mp3', (buffer) => {
+      star.setBuffer(buffer);
+      star.setLoop(false)
+      star.setVolume(1.0);
+
+    })
+
+    function addstar(numstars: number){
+      offset = .35
+      console.log('addedstars')
+      for(let i = 0; i< numstars; i++){
+
+        loader.load('ender_star/scene.gltf', (gltf) => {
+          gltf.scene.position.set(-0.5 + i*offset,0,0.7);
+          gltf.scene.rotation.x = (Math.PI/2);
+          gltf.scene.scale.set(0.25,0.25,0.25);
+          scene.add(gltf.scene)
+        })
+
+      }
+    }
     
   
 
-    function playAudioAtPercentage(percentage : number) {
-      if (!audio || !audioBuffer) {
+    function playAudioAtPercentage(percentage : number, audioBuffer: AudioBuffer) {
+      if (!ripping || !audioBuffer) {
         console.error("Audio is not loaded yet!");
         return;
       }
@@ -262,16 +340,16 @@ export default function Home() {
         return;
       }
 
-      console.log("Audio object:",audio)
+      console.log("Audio object:",ripping)
 
-      if(!audio.buffer){
+      if(!ripping.buffer){
         console.error("Audio buffer or source is not available.");
         return;
         
       }
 
       // Calculate the target time based on the percentage
-      const duration = audio.buffer.duration; // Total audio duration in seconds
+      const duration = ripping.buffer.duration; // Total audio duration in seconds
       const targetTime = (percentage / 100) * duration;
 
       // Stop any ongoing playback
@@ -290,26 +368,59 @@ export default function Home() {
 
 
     function openpack() {
-    if (cardpack && !isMoving) {
+    if (cardpack_buttom && !isMoving && cardpack_top) {
+        packopened = true;
 
         scene.remove(lineObject)
         isMoving = true;
 
-        // Create a GSAP animation for smooth movement
-        gsap.to(cardpack.position, {
-          z: cardpack.position.z + 5, // Move 5 units up
+      // Define a motion path using control points for a parabolic arc
+      const curve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(0, 0, 0),    // Start position
+        new THREE.Vector3(-2, -2, 3),  // Arc upward and backward
+        new THREE.Vector3(-5, 2, 5), // Fall forward and downward
+      ]);
+
+      hit.play()
+
+      // Animate along the curve
+      gsap.to({ t: 0 }, {
+        t: 1,
+        duration: 4,
+        ease: "power2.out",
+        onUpdate: function () {
+          const point = curve.getPointAt(this.targets()[0].t);
+          cardpack_top?.position.set(point.x, point.y, point.z);
+        },
+      });
+
+      // Add rotation animation
+      gsap.to(cardpack_top.rotation, {
+        x: Math.PI * 1.2, // Flip backward
+        y: -Math.PI * 0.5, // Add slight sideways spin
+        z: Math.PI * 0.2, // Slight twist
+        duration: 4,
+        ease: "power2.out",
+      });
+        gsap.to(cardpack_buttom.position, {
+          z: cardpack_buttom.position.z + 5, // Move 5 units up
           duration: 1.5, // 1 second duration
           ease: "power2.in",
           onComplete: () => {
             isMoving = false; // Allow further moves after animation completes
           }
         });
+        addstar(3)
       }
 
     }
 
+
     function movecard(pokemon_card: THREE.Object3D) {
+      
       if (pokemon_card) {
+        star.stop()
+        star.play();
 
         gsap.to(pokemon_card.position, {
           x: pokemon_card.position.x + 10,
@@ -317,8 +428,6 @@ export default function Home() {
 
 
         });
-
-
       };
     }
 
@@ -462,7 +571,7 @@ export default function Home() {
       if (targetObject) {
         const intersects = raycaster.intersectObject(targetObject);
 
-        console.log("intersects",intersects)
+        // console.log("intersects",intersects)
 
         if (intersects.length > 0) {
 
@@ -496,8 +605,10 @@ export default function Home() {
 
     renderer.domElement.addEventListener('pointerdown', (event) => {
       isDragging = true;
-
-      if (!pokemonModels) return
+      console.log('packopened?', !packopened )
+      if (!pokemonModels || !packopened) {
+          return
+      } 
 
       console.log("pokemonModels[count]",pokemonModels[count])
       const cardIntersectionPoint = calculateIntersectionPoint(event, camera, scene, pokemonModels[count]);
@@ -510,24 +621,27 @@ export default function Home() {
     });
 
     renderer.domElement.addEventListener('pointermove', (event) => {
-      const cuttingThresholdYmax: number = -0.58
-      const cuttingThresholdYmin: number = -0.77
+      const cuttingThresholdYmax: number = -0.80
+      const cuttingThresholdYmin: number = -0.9
       const cuttingLenght: number = 1.24
       let percentage: number = 0
-      if (!isDragging || !cardpack) {
+      if (!isDragging || !cardpack_buttom) {
         return;
       }
 
   
-      const intersectionPoint = calculateIntersectionPoint(event, camera, scene, cardpack);
+      const intersectionPoint = calculateIntersectionPoint(event, camera, scene, cardpack_buttom);
 
 
   
       if (intersectionPoint) {
-        controls.enabled = false;
+        // controls.enabled = false;
         if( intersectionPoint.x > maxX) maxX = intersectionPoint.x;
         if( intersectionPoint.x < minX) minX = intersectionPoint.x;
 
+
+        
+        console.log(intersectionPoint.z)
         if (intersectionPoint.z > cuttingThresholdYmax || intersectionPoint.z < cuttingThresholdYmin) {
           lastPercentage = -1
           pointCloudManager.clear();
@@ -538,8 +652,8 @@ export default function Home() {
 
         if(percentage - lastPercentage > 10){
           lastPercentage = percentage
-          console.log("percentage complete:", lastPercentage, "%")
-          playAudioAtPercentage(lastPercentage)
+     
+          playAudioAtPercentage(lastPercentage, ripping_buffer)
         }
           
      
@@ -550,20 +664,24 @@ export default function Home() {
 
 
         pointCloudManager.addPoint(intersectionPoint);
-        console.log('Intersection point:', intersectionPoint);
+        // console.log('Intersection point:', intersectionPoint);
       }
       
     });
 
     renderer.domElement.addEventListener('pointerup', () => {
       isDragging = false;
-      controls.enabled = true;
-      source.stop()
+      
+      // controls.enabled = true;
+      if(source){
+        source.stop()
+      }
+    
 
-      console.log('Min X:', minX);
-      console.log('Max X:', maxX);
+      // console.log('Min X:', minX);
+      // console.log('Max X:', maxX);
 
-      console.log("Max X - Min X",minX - maxX)
+      // console.log("Max X - Min X",minX - maxX)
       if( maxX - minX > 1.24) {
         openpack();
       }
